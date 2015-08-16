@@ -52,6 +52,14 @@ module Netzke
     #   Note, that the root record can be hidden from the tree by specifying the `Ext.tree.Panel`'s `root_visible`
     #   config option set to `false`, which is probably what you want when you have multiple root records.
     #
+    # [drag_and_drop]
+    #
+    #   (defaults to false) use drag and drop in the tree.
+    #
+    # [drag_and_drop_instantly_save]
+    #
+    #    (defaults to true) If true, parent_id updates on drop event. If false, parent_id will be updated on apply.
+    #
     # == Persisting nodes' expand/collapse state
     #
     # If the model includes the `expanded` DB field, the expand/collapse state will get stored in the DB.
@@ -192,6 +200,13 @@ module Netzke
         end
       end
 
+      endpoint :server_update_parent_id do |records, this|
+        records.each do |record|
+          r = data_adapter.find_record(record[:id])
+          update_record(r, record)
+        end
+      end
+
       protected
 
       def bbar
@@ -213,6 +228,15 @@ module Netzke
           f.mode = config[:mode]
           f.items = default_fields_for_forms
         end
+      end
+
+      def update_record(record, attrs)
+        if config.drag_and_drop && attrs['parentId']
+          parent_id = attrs['parentId'] == 'root' ? nil : attrs['parentId']
+          data_adapter.set_record_value_for_attribute(record, { name: 'parent_id' }, parent_id)
+        end
+
+        super
       end
 
       private
@@ -242,6 +266,8 @@ module Netzke
         c.enable_pagination = true if c.enable_pagination.nil?
         c.rows_per_page = 30 if c.rows_per_page.nil?
         c.tools = %w{ refresh } if c.tools.nil?
+        c.drag_and_drop_instantly_save = true if c.drag_and_drop_instantly_save.nil?
+        c.drag_and_drop = false if c.drag_and_drop.nil?
       end
     end
   end
